@@ -69,7 +69,7 @@ The first build compiles audio.cpp's runtime and the selected families (several 
 | `model-<target>` | compile that family in (`AUDIOCPP_MODELS`) |
 | `all-models` | every family |
 | `vulkan`, `cuda`, `hip`, `metal` | GPU backends (`metal` only acts on Apple targets; it is a default feature) |
-| `openmp` (default) | OpenMP for audio.cpp's host code, as upstream builds it |
+| `openmp` (default) | OpenMP for audio.cpp's host code, as upstream builds it. Keep it on with MSVC: audio.cpp's own ggml thread pool lacks an MSVC barrier fix ([`docs/upstream.md`](docs/upstream.md) #9) |
 | `native` | tune the CPU kernels to the build machine: **never for a build you ship** (older CPUs crash) |
 | `gpl-espeak` | statically link eSpeak-ng (GPL-3.0-or-later) for families that phonemize through it: changes your licence |
 | `log` | `audiocpp::logging::route_to_log()` sends audio.cpp's log lines to the `log` crate |
