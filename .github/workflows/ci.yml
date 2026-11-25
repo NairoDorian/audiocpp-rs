@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Also build audio.cpp and run the model tests on Windows, Linux and macOS"
+        type: boolean
+        default: true
+
+jobs:
+  # Fast, on every push: the bindings still match the pinned header, the model
+  # features still match the pinned tree, and the code is formatted.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+      - run: cargo xtask check-abi
+      - run: cargo xtask features --check
+
+  # On demand (Actions → ci → Run workflow): compiles audio.cpp from source on
+  # each OS and runs the model tests. Missing models fail here, never skip.
+  build-test:
+    if: github.event_name == 'workflow_dispatch' && inputs.build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: models
+          key: test-models-v1
+      - run: uv run scripts/fetch_test_models.py
+      - run: cargo test --release --features model-tiny_voca,model-sense_asr
+        env:
+          AUDIOCPP_REQUIRE_MODELS: "1"

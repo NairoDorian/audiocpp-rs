@@ -1,0 +1,7 @@
+# Written by `cargo xtask check-abi --update` after the bindings were reviewed
+# against this header. A different hash means the header changed: review
+# audiocpp-sys/src/lib.rs, then update.
+header = "include/audiocpp.h"
+sha256 = "82ab33d301b82a145b961c9be2b607a9a09b5a19d52f1b96bf0bcb2d710e665e"
+abi = "0.4.0"
+reviewed-at = "v0.9.6"

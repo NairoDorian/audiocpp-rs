@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = ["audiocpp-sys", "audiocpp", "xtask"]
+default-members = ["audiocpp-sys", "audiocpp"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+repository = "https://github.com/NairoDorian/audiocpp-rs"
+homepage = "https://github.com/NairoDorian/audiocpp-rs"
+authors = ["NairoDorian"]

@@ -1,0 +1,7 @@
+/target/
+/models/
+Cargo.lock.bak
+*.wav
+.vscode/
+.idea/
+.vs/
