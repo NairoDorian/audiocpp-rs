@@ -56,5 +56,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add audiocpp-sys/audio.cpp audiocpp-sys/Cargo.toml audiocpp/Cargo.toml docs/model-features.md
-          git commit -m "deps(audio.cpp): follow main to ${{ steps.bump.outputs.to }} (${{ steps.bump.outputs.commits }} commits)"
+          git commit -m "deps(audio.cpp): follow main to ${{ steps.bump.outputs.to }} (${{ steps.bump.outputs.commits_text }})"
           git push

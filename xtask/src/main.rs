@@ -293,19 +293,22 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
 /// Move the pin to audio.cpp's latest main commit: fetch, check out origin/main, prove the
 /// bindings against its header, regenerate the model features. Returns false (exit 1) when the
 /// C header changed: the checkout stays moved so the bindings can be reviewed against it.
-/// Under GitHub Actions (GITHUB_OUTPUT set) it also writes `moved`, `from`, `to` and `commits`.
+/// Under GitHub Actions (GITHUB_OUTPUT set) it also writes `moved`, `from`, `to`, `commits`
+/// and `commits_text` ("1 commit", "3 commits").
 fn bump() -> Result<bool, String> {
     let dir = audio_cpp();
     git(&dir, &["fetch", "origin", "--tags", "--prune", "--force"]).ok_or("git fetch failed")?;
     let from = git(&dir, &["rev-parse", "HEAD"]).ok_or("audio.cpp is not checked out")?;
     let to = git(&dir, &["rev-parse", "refs/remotes/origin/main"]).ok_or("audio.cpp has no origin/main")?;
     let commits = git(&dir, &["rev-list", "--count", &format!("{from}..{to}")]).unwrap_or_else(|| "?".into());
+    let commits_text = if commits == "1" { "1 commit".to_string() } else { format!("{commits} commits") };
     let moved = from != to;
     let fields = [
         ("moved", if moved { "true" } else { "false" }),
         ("from", &from[..8]),
         ("to", &to[..8]),
         ("commits", commits.as_str()),
+        ("commits_text", commits_text.as_str()),
     ];
     for (key, value) in fields {
         github_output(key, value);
@@ -315,7 +318,7 @@ fn bump() -> Result<bool, String> {
         return Ok(true);
     }
     git(&dir, &["checkout", "--quiet", "--detach", &to]).ok_or("git checkout failed")?;
-    println!("audio.cpp {} -> {} ({commits} commits)", &from[..8], &to[..8]);
+    println!("audio.cpp {} -> {} ({commits_text})", &from[..8], &to[..8]);
     if !check_abi(false)? {
         eprintln!(
             "the C header changed: review audiocpp-sys/src/lib.rs against it, then \
