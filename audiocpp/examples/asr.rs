@@ -21,21 +21,18 @@ fn read_wav(path: &str) -> Result<(Vec<f32>, u32, u16), Box<dyn std::error::Erro
     Ok((samples, spec.sample_rate, spec.channels))
 }
 
-/// Several audio.cpp ASR families split long audio with a VAD whose default
-/// model path is relative to the working directory. With AUDIOCPP_VAD_MODEL set
-/// (the folder holding silero_vad_16k.safetensors) the session uses it;
-/// otherwise the request asks for fixed windows, which need no VAD model.
-/// Options are only set when the model declares them, under the exact name it
-/// reports: session option names carry a family prefix ("sense_asr.vad_model_path"),
-/// and an unknown session key is ignored without an error.
-fn chunking(model: &Model) -> (Options, Option<&'static str>) {
+/// Several audio.cpp ASR families split long audio with a VAD. Its default model,
+/// `assets/framework/models/silero_vad`, is found beside the library, where
+/// audiocpp-sys stages it. AUDIOCPP_VAD_MODEL (the folder holding
+/// silero_vad_16k.safetensors) overrides it. The option is set under the exact name
+/// the model declares: session option names carry a family prefix
+/// ("sense_asr.vad_model_path"), and an unknown session key is ignored without an error.
+fn session_options(model: &Model) -> Options {
     let vad_key =
         model.options(OptionScope::Session).into_iter().map(|o| o.name).find(|n| n.ends_with("vad_model_path"));
-    let has_chunk_mode = model.options(OptionScope::Request).iter().any(|o| o.name == "audio_chunk_mode");
     match (std::env::var("AUDIOCPP_VAD_MODEL"), vad_key) {
-        (Ok(path), Some(key)) => (Options::new().with(key, path), None),
-        _ if has_chunk_mode => (Options::new(), Some("fixed")),
-        _ => (Options::new(), None),
+        (Ok(path), Some(key)) => Options::new().with(key, path),
+        _ => Options::new(),
     }
 }
 
@@ -50,14 +47,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let registry = Registry::new()?;
     let model = Model::load(&registry, &args[0], &config, &Options::new())?;
-    let (session_options, chunk_mode) = chunking(&model);
-    let mut session = model.session(&Task::Asr, Mode::Offline, &Backend::cpu(), &session_options)?;
+    let mut session = model.session(&Task::Asr, Mode::Offline, &Backend::cpu(), &session_options(&model))?;
 
     let mut request = Request::new();
     request.audio(&samples, rate, channels)?;
-    if let Some(mode) = chunk_mode {
-        request.option("audio_chunk_mode", mode)?;
-    }
     let t0 = Instant::now();
     let result = session.run(&request)?;
     let ms = t0.elapsed().as_secs_f64() * 1e3;

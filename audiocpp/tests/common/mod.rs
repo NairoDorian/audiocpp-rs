@@ -45,58 +45,6 @@ pub fn word_errors(reference: &str, hypothesis: &str) -> (usize, usize) {
     (prev[h.len()], r.len())
 }
 
-/// Mono band-limited resampling (Kaiser-windowed sinc), test-only: audio.cpp's
-/// VAD chunking wants 16 kHz while tiny_voca speaks at 24 kHz.
-pub fn resample_mono(input: &[f32], from: u32, to: u32) -> Vec<f32> {
-    if from == to {
-        return input.to_vec();
-    }
-    let ratio = f64::from(to) / f64::from(from);
-    let scale = ratio.min(1.0);
-    let cutoff = 0.97 * scale;
-    let half = 32.0 / scale; // kernel half-width, in input samples
-    let beta = 9.0;
-    let i0 = |x: f64| {
-        let (mut sum, mut term, q) = (1.0, 1.0, x * x / 4.0);
-        for k in 1..64 {
-            term *= q / f64::from(k * k);
-            sum += term;
-        }
-        sum
-    };
-    let i0_beta = i0(beta);
-    let n_out = (input.len() as f64 * ratio).round() as usize;
-    (0..n_out)
-        .map(|j| {
-            let t = j as f64 / ratio;
-            let first = ((t - half).ceil() as i64).max(0);
-            let last = ((t + half).floor() as i64).min(input.len() as i64 - 1);
-            let (mut acc, mut wsum) = (0.0, 0.0);
-            for k in first..=last {
-                let x = t - k as f64;
-                let u = x / half;
-                if u.abs() >= 1.0 {
-                    continue;
-                }
-                let arg = cutoff * x;
-                let sinc = if arg.abs() < 1e-12 {
-                    1.0
-                } else {
-                    (std::f64::consts::PI * arg).sin() / (std::f64::consts::PI * arg)
-                };
-                let h = sinc * i0(beta * (1.0 - u * u).sqrt()) / i0_beta;
-                acc += h * f64::from(input[k as usize]);
-                wsum += h;
-            }
-            if wsum == 0.0 {
-                0.0
-            } else {
-                (acc / wsum) as f32
-            }
-        })
-        .collect()
-}
-
 pub fn rms(samples: &[f32]) -> f32 {
     if samples.is_empty() {
         return 0.0;

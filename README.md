@@ -13,7 +13,7 @@ Written for [ZER0 / FreeSpeech](#who-it-is-for), next to [`transcribe-cpp`](http
 
 | | |
 |---|---|
-| audio.cpp pin | **v0.9.6** (release lane), C ABI 0.4.0 |
+| audio.cpp pin | **audio.cpp's latest `main` commit**, followed daily by a workflow that builds and tests each move ([`docs/updating-audio-cpp.md`](docs/updating-audio-cpp.md)); C ABI 0.4.0 |
 | Bindings | the whole C ABI: offline and streaming sessions, requests (text, audio, voices, style, options, artifacts), results (audio, text, segments, words, speaker turns, named audio, artifacts, custom schema), model introspection, logging |
 | Verified on | Windows 11, MSVC 14.52, CPU (see the CHANGELOG for the test run) |
 | Not yet verified | Linux, macOS, Android, GPU backends (they build through the same features; nobody has run them here yet) |
@@ -62,7 +62,7 @@ The first build compiles audio.cpp's runtime and the selected families (several 
 
 ## Choosing what goes into the library
 
-**Model families** are Cargo features, one per audio.cpp model target: `model-kokoro_tts`, `model-kitten_tts2`, `model-qwen3_tts`, `model-chatterbox`, `model-parakeet_tdt`, … The full list (145 at v0.9.6) is generated in [`docs/model-features.md`](docs/model-features.md). No model feature builds the runtime alone; `all-models` builds every family (a long build, a big library).
+**Model families** are Cargo features, one per audio.cpp model target: `model-kokoro_tts`, `model-kitten_tts2`, `model-qwen3_tts`, `model-chatterbox`, `model-parakeet_tdt`, … The full list (147 when this was written) is generated from the pinned tree in [`docs/model-features.md`](docs/model-features.md). No model feature builds the runtime alone; `all-models` builds every family (a long build, a big library).
 
 | Feature | Effect |
 |---|---|

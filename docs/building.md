@@ -69,7 +69,8 @@ fn main() {
 - **Linux:** link the app with an rpath of `$ORIGIN` (`-C link-arg=-Wl,-rpath,$ORIGIN`) and ship `libaudiocpp.so*` beside it.
 - **macOS:** `@executable_path` (or `@loader_path` inside a bundle).
 - **Windows:** the DLL beside the `.exe`, plus the Visual C++ runtime (and `vcomp140.dll` with the `openmp` feature).
-- Model specs are compiled into the library, so no data directory is needed. eSpeak data is only needed with `gpl-espeak`, for the families that use it.
+- **`assets/` beside the library.** `DEP_AUDIOCPP_LIB_DIR` also holds `assets/framework/models/silero_vad/` (1.2 MB): the default VAD that ASR families chunk long audio with. audio.cpp finds it beside the library, or up to three directories above it, so copy the `assets/` folder along with the library. An app without ASR can leave it out.
+- Model specs are compiled into the library, so no `model_specs/` directory is needed. eSpeak data is only needed with `gpl-espeak`, for the families that use it.
 
 ## Troubleshooting
 

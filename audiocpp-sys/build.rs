@@ -110,7 +110,7 @@ fn describe(src: &Path) -> String {
     Command::new("git")
         .arg("-C")
         .arg(src)
-        .args(["describe", "--tags", "--always", "--abbrev=8"])
+        .args(["describe", "--tags", "--match", "v*", "--always", "--abbrev=8"])
         .output()
         .ok()
         .filter(|o| o.status.success())
@@ -133,6 +133,7 @@ fn build_from_source(target_os: &str) -> PathBuf {
     for file in ["include/audiocpp.h", "CMakeLists.txt", "src/capi/audiocpp.cpp"] {
         println!("cargo:rerun-if-changed={}", src.join(file).display());
     }
+    watch_checkout(&src);
 
     let models = selected_models();
     let model_set = env::var("AUDIOCPP_MODEL_SET").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| {
@@ -254,7 +255,57 @@ fn build_from_source(target_os: &str) -> PathBuf {
     println!("cargo:include={}", src.join("include").display());
     println!("cargo:version={version}");
     println!("cargo:models={}", models.join(","));
+    stage_bundled_assets(&src, &lib_dir);
     lib_dir
+}
+
+/// Rerun when the audio.cpp checkout moves (a pin bump), whatever files the move changes: watch
+/// the checkout's HEAD, and the branch it points at. A tree without git keeps the file triggers.
+fn watch_checkout(src: &Path) {
+    let Ok(out) = Command::new("git").arg("-C").arg(src).args(["rev-parse", "--absolute-git-dir"]).output() else {
+        return;
+    };
+    if !out.status.success() {
+        return;
+    }
+    let git_dir = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim());
+    let head = git_dir.join("HEAD");
+    println!("cargo:rerun-if-changed={}", head.display());
+    if let Some(reference) =
+        fs::read_to_string(&head).ok().and_then(|h| h.strip_prefix("ref: ").map(|r| r.trim().to_string()))
+    {
+        println!("cargo:rerun-if-changed={}", git_dir.join(reference).display());
+    }
+}
+
+/// audio.cpp assets that its defaults point at, relative to its source tree: the Silero VAD
+/// model that ASR families use for VAD chunking (`<family>.vad_model_path`, 1.2 MB).
+const BUNDLED_ASSETS: &str = "assets/framework/models/silero_vad";
+
+/// audio.cpp looks for a default asset relative to the working directory, then beside the
+/// library and up to three directories above it (audio.cpp #1403). Copy the assets beside
+/// the library, so the defaults work wherever the host process runs.
+fn stage_bundled_assets(src: &Path, lib_dir: &Path) {
+    let from = src.join(BUNDLED_ASSETS);
+    if from.is_dir() {
+        if let Err(e) = copy_dir(&from, &lib_dir.join(BUNDLED_ASSETS)) {
+            println!("cargo:warning=audiocpp-sys: could not stage {BUNDLED_ASSETS} beside the library: {e}");
+        }
+    }
+}
+
+fn copy_dir(from: &Path, to: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(to)?;
+    for entry in fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir(&entry.path(), &target)?;
+        } else {
+            fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
 }
 
 fn emit_link(lib_dir: &Path, target_os: &str) {
@@ -284,12 +335,19 @@ fn stage_windows_dll(lib_dir: &Path) {
     else {
         return;
     };
+    let assets = lib_dir.join(BUNDLED_ASSETS);
     for sub in ["", "deps", "examples"] {
         let dir = profile_dir.join(sub);
         if dir.is_dir() || sub.is_empty() {
             let _ = fs::create_dir_all(&dir);
             if let Err(e) = fs::copy(&dll, dir.join("audiocpp.dll")) {
                 println!("cargo:warning=audiocpp-sys: could not stage audiocpp.dll in {}: {e}", dir.display());
+            }
+            // The staged DLL is the one a process loads, so its defaults look beside it.
+            if assets.is_dir() {
+                if let Err(e) = copy_dir(&assets, &dir.join(BUNDLED_ASSETS)) {
+                    println!("cargo:warning=audiocpp-sys: could not stage {BUNDLED_ASSETS} in {}: {e}", dir.display());
+                }
             }
         }
     }

@@ -10,8 +10,7 @@ use audiocpp::{Backend, Mode, Model, ModelConfig, OptionScope, Options, Registry
 
 const TEXT: &str = "The quick brown fox jumps over the lazy dog.";
 
-/// Silero VAD weights as audio.cpp ships them in its tree. An app ships this
-/// folder itself and passes its absolute path (see docs/models.md).
+/// Silero VAD weights as audio.cpp ships them in its tree.
 fn silero_vad_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../audiocpp-sys/audio.cpp/assets/framework/models/silero_vad")
 }
@@ -26,10 +25,14 @@ fn speak(registry: &Registry, tts_path: &Path) -> (Vec<f32>, u32, u16) {
     (audio.to_vec(), audio.sample_rate, audio.channels)
 }
 
-fn listen(asr: &mut Session, samples: &[f32], rate: u32, channels: u16, chunk_mode: &str) -> String {
-    // 24 kHz in: audio.cpp converts the input for the 16 kHz model.
+/// tiny_voca speaks at 24 kHz; audio.cpp converts the input for the 16 kHz model, and its VAD
+/// chunking resamples for Silero too (audio.cpp #1404). `chunk_mode` None keeps the default.
+fn listen(asr: &mut Session, samples: &[f32], rate: u32, channels: u16, chunk_mode: Option<&str>) -> String {
     let mut request = Request::new();
-    request.audio(samples, rate, channels).unwrap().option("audio_chunk_mode", chunk_mode).unwrap();
+    request.audio(samples, rate, channels).unwrap();
+    if let Some(mode) = chunk_mode {
+        request.option("audio_chunk_mode", mode).unwrap();
+    }
     asr.run(&request).unwrap().text().expect("an ASR result carries text").text
 }
 
@@ -52,10 +55,25 @@ fn tts_into_asr_keeps_the_words() {
     let declared: Vec<String> = asr_model.options(OptionScope::Request).into_iter().map(|o| o.name).collect();
     assert!(declared.iter().any(|n| n == "audio_chunk_mode"), "{declared:?}");
 
-    // "none": one window, no VAD. The default ("auto") may load a VAD model from
-    // a path relative to the working directory, which an app cannot rely on.
+    // "none": one window, no VAD.
     let mut asr = asr_model.session(&Task::Asr, Mode::Offline, &Backend::cpu(), &Options::new()).unwrap();
-    assert_words(&listen(&mut asr, &samples, rate, channels, "none"));
+    assert_words(&listen(&mut asr, &samples, rate, channels, Some("none")));
+}
+
+#[test]
+fn default_options_chunk_with_the_vad_beside_the_library() {
+    let (Some(tts_path), Some(asr_path)) = (common::model(common::TINY_VOCA), common::model(common::SENSEVOICE)) else {
+        return;
+    };
+    let registry = Registry::new().unwrap();
+    let (samples, rate, channels) = speak(&registry, &tts_path);
+
+    // No VAD option and no chunk mode: SenseVoice's default ("auto") chunks with the default
+    // Silero VAD, which audio.cpp finds beside the library (#1403) when the working directory
+    // lacks it. audiocpp-sys stages assets/ beside every copy of the library it makes.
+    let asr_model = Model::load(&registry, &asr_path, &ModelConfig::default(), &Options::new()).unwrap();
+    let mut asr = asr_model.session(&Task::Asr, Mode::Offline, &Backend::cpu(), &Options::new()).unwrap();
+    assert_words(&listen(&mut asr, &samples, rate, channels, None));
 }
 
 #[test]
@@ -77,9 +95,5 @@ fn vad_chunking_works_with_an_explicit_vad_path() {
     assert!(key.contains('.'), "session option names are family-prefixed: {session_names:?}");
     let session_options = Options::new().with(key.as_str(), vad.display());
     let mut asr = asr_model.session(&Task::Asr, Mode::Offline, &Backend::cpu(), &session_options).unwrap();
-    // VAD chunking runs Silero VAD on the request audio as given, and Silero only
-    // takes 16 kHz (the ASR model itself resamples; the chunker does not).
-    assert_eq!(channels, 1);
-    let at_16k = common::resample_mono(&samples, rate, 16_000);
-    assert_words(&listen(&mut asr, &at_16k, 16_000, 1, "vad"));
+    assert_words(&listen(&mut asr, &samples, rate, channels, Some("vad")));
 }

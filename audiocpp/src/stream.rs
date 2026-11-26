@@ -180,7 +180,7 @@ impl Event {
                 let st = unsafe {
                     sys::audiocpp_event_voice_activity(self.ptr.as_ptr(), i, &mut kind, &mut sample, &mut probability)
                 };
-                (st == sys::AUDIOCPP_OK).then(|| VoiceActivity {
+                (st == sys::AUDIOCPP_OK).then_some(VoiceActivity {
                     kind: match kind {
                         sys::AUDIOCPP_VOICE_ACTIVITY_SPEECH_START => VoiceActivityKind::SpeechStart,
                         sys::AUDIOCPP_VOICE_ACTIVITY_SPEECH_END => VoiceActivityKind::SpeechEnd,

@@ -9,11 +9,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 authors.workspace = true
 
 [dependencies]
-audiocpp-sys = { path = "../audiocpp-sys", version = "0.1.0", default-features = false }
+audiocpp-sys = { path = "../audiocpp-sys", version = "0.2.0", default-features = false }
 log = { version = "0.4", optional = true }
 
 [dev-dependencies]
@@ -55,6 +54,7 @@ model-controlfoley = ["audiocpp-sys/model-controlfoley"]
 model-cosyvoice3 = ["audiocpp-sys/model-cosyvoice3"]
 model-crisperwhisper = ["audiocpp-sys/model-crisperwhisper"]
 model-demucs = ["audiocpp-sys/model-demucs"]
+model-dettato = ["audiocpp-sys/model-dettato"]
 model-dots_tts = ["audiocpp-sys/model-dots_tts"]
 model-dramabox = ["audiocpp-sys/model-dramabox"]
 model-earshot_vad = ["audiocpp-sys/model-earshot_vad"]
@@ -80,6 +80,7 @@ model-index_echo = ["audiocpp-sys/model-index_echo"]
 model-index_tts2 = ["audiocpp-sys/model-index_tts2"]
 model-inflect_v2 = ["audiocpp-sys/model-inflect_v2"]
 model-irodori_tts = ["audiocpp-sys/model-irodori_tts"]
+model-kale_tts = ["audiocpp-sys/model-kale_tts"]
 model-kitten_tts = ["audiocpp-sys/model-kitten_tts"]
 model-kitten_tts2 = ["audiocpp-sys/model-kitten_tts2"]
 model-kokoro_tts = ["audiocpp-sys/model-kokoro_tts"]

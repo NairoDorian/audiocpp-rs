@@ -1,0 +1,60 @@
+name: follow audio.cpp
+
+# Keeps the audio.cpp pin on audio.cpp's latest main commit. Daily, and on demand (Actions →
+# follow audio.cpp → Run workflow):
+#   1. `cargo xtask bump`: move the submodule to audio.cpp's main, prove the bindings against
+#      its C header, regenerate the model features;
+#   2. build audio.cpp and run the model tests (Linux);
+#   3. push the move to main.
+# A changed C header, a failed build or a failed test stops the run before the push. The run
+# then fails, which notifies the repository owner; docs/updating-audio-cpp.md has the manual steps.
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: follow-audio-cpp
+  cancel-in-progress: false
+
+jobs:
+  follow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Move the pin to audio.cpp main
+        id: bump
+        run: cargo xtask bump
+
+      - uses: astral-sh/setup-uv@v5
+        if: steps.bump.outputs.moved == 'true'
+      - uses: actions/cache@v4
+        if: steps.bump.outputs.moved == 'true'
+        with:
+          path: models
+          key: test-models-v1
+      - name: Fetch the test models
+        if: steps.bump.outputs.moved == 'true'
+        run: uv run scripts/fetch_test_models.py
+      - name: Build audio.cpp and run the model tests
+        if: steps.bump.outputs.moved == 'true'
+        run: cargo test --release --features model-tiny_voca,model-sense_asr
+        env:
+          AUDIOCPP_REQUIRE_MODELS: "1"
+
+      - name: Push the new pin
+        if: steps.bump.outputs.moved == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audiocpp-sys/audio.cpp audiocpp-sys/Cargo.toml audiocpp/Cargo.toml docs/model-features.md
+          git commit -m "deps(audio.cpp): follow main to ${{ steps.bump.outputs.to }} (${{ steps.bump.outputs.commits }} commits)"
+          git push

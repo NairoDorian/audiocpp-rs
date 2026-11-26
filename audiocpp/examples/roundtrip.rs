@@ -5,7 +5,7 @@
 //!       models/SenseVoice-Small-GGUF/sensevoice-small-q8-audiocpp-v1.gguf \
 //!       "The quick brown fox jumps over the lazy dog." [VOICE]
 
-use audiocpp::{Backend, Mode, Model, ModelConfig, OptionScope, Options, Registry, Request, ResultData, Task};
+use audiocpp::{Backend, Mode, Model, ModelConfig, Options, Registry, Request, ResultData, Task};
 
 fn words(s: &str) -> Vec<String> {
     s.to_lowercase()
@@ -49,11 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut listen = Request::new();
     listen.audio(audio.samples, audio.sample_rate, audio.channels)?;
-    // A short utterance needs no chunking; and the families that chunk with a
-    // VAD look for its model relative to the working directory by default.
-    if asr_model.options(OptionScope::Request).iter().any(|o| o.name == "audio_chunk_mode") {
-        listen.option("audio_chunk_mode", "none")?;
-    }
+    // Default options: families that chunk with a VAD find its model beside the library.
     let heard = asr.run(&listen)?.text().ok_or("no text")?.text;
 
     let (reference, hypothesis) = (words(&args[2]), words(&heard));

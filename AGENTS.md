@@ -13,6 +13,7 @@ Two crates over audio.cpp's C ABI and nothing else:
 ## Never
 
 - **Never edit files under `audiocpp-sys/audio.cpp/`.** It is upstream's tree at a pinned commit. A change the engine needs is a pull request to audio.cpp (`docs/upstream.md`); then the pin moves (`docs/updating-audio-cpp.md`).
+- **The pin follows audio.cpp's latest `main`.** The *follow audio.cpp* workflow moves it daily. By hand, run `cargo xtask bump`, then the tests. Don't pin a release tag unless the author asks: disable the workflow while a pin must stay put.
 - Never call audio.cpp's C++ internals, or include any header but `audiocpp.h`. The C ABI is the only contract.
 - Never hand-edit the blocks between `# BEGIN GENERATED MODEL FEATURES` and `# END …` in either `Cargo.toml`, nor `docs/model-features.md`: run `cargo xtask features`.
 - Never run `cargo xtask check-abi --update` without reading the header diff and updating `audiocpp-sys/src/lib.rs` first. That file is the reviewed binding; the lock only records that the review happened.
@@ -28,6 +29,7 @@ cargo test --release --features model-tiny_voca,model-sense_asr
 cargo xtask check-abi                                       # bindings == pinned header
 cargo xtask features --check                                # features == pinned model targets
 cargo xtask status --fetch                                  # the pin vs audio.cpp's release / main
+cargo xtask bump                                            # move the pin to audio.cpp's main + checks
 cargo clippy --release --features model-tiny_voca,model-sense_asr --all-targets
 ```
 

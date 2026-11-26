@@ -30,10 +30,10 @@ For an app:
 ## Files a family needs besides its GGUF
 
 Some families load a second model at run time.
-- The common case is ASR chunking, which uses a VAD: Silero, by default from a path relative to the working directory.
-- Ship audio.cpp's `assets/framework/models/silero_vad/` folder (one 1.2 MB file) with the app, and pass its absolute path as the family's `…vad_model_path` session option.
-- Or set `audio_chunk_mode` to `fixed` / `none`.
-- [`api.md`](api.md#things-worth-knowing) has the details, and the 16 kHz requirement that comes with VAD chunking.
+- The common case is ASR chunking, which uses Silero VAD: `assets/framework/models/silero_vad/` (one 1.2 MB file, the official Silero v6.2 weights).
+- `audiocpp-sys` stages it beside the library, and audio.cpp finds it there. Ship it next to the library (see [building.md](building.md#shipping)).
+- To use another VAD file, set the family's `…vad_model_path` session option; to skip the VAD, set `audio_chunk_mode` to `fixed` / `none`.
+- [`api.md`](api.md#things-worth-knowing) has the details.
 
 ## Licences
 

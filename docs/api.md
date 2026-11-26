@@ -44,11 +44,12 @@ Registry ──load──► Model ──session(task, mode, backend)──► S
   - Request options are bare (`audio_chunk_mode`, `speed`).
   - Session options carry the family prefix (`sense_asr.vad_model_path`), as `model.options(OptionScope::Session)` lists them, even though the JSON spec writes them bare.
   - audio.cpp **silently ignores an unknown session option**, so a wrong name is not an error, just no effect. Look names up with `model.options(scope)` instead of hardcoding them.
-- **ASR chunking needs a VAD file, or no VAD.** Several audio.cpp ASR families (sense_asr, qwen3_asr, vibevoice_asr, granite5asr, granite_speech5, …) split long audio with a VAD.
-  - The default VAD model path is `assets/framework/models/silero_vad`, **relative to the working directory**. In an app that path does not exist, and the run fails with "no VAD model … can load assets\framework\models\silero_vad".
-  - Either ship audio.cpp's Silero VAD folder (`audiocpp-sys/audio.cpp/assets/framework/models/silero_vad/`, one 1.2 MB file) and pass its absolute path in the family's `…vad_model_path` session option, or set the request option `audio_chunk_mode` to `fixed` (fixed windows) or `none` (short utterances).
-  - With VAD chunking the request audio must be **16 kHz**: the ASR model resamples its input, but the chunker runs Silero, which only takes 16 kHz.
-  - `tests/roundtrip.rs` and `examples/asr.rs` show both ways.
+- **ASR chunking uses a VAD, found beside the library.** Several audio.cpp ASR families (sense_asr, qwen3_asr, parakeet_tdt, vibevoice_asr, moonshine_asr, lfm2_audio, …) split long audio with Silero VAD.
+  - The default model is `assets/framework/models/silero_vad`. audio.cpp looks for it relative to the working directory, then beside the library and up to three directories above it.
+  - `audiocpp-sys` stages that folder (one 1.2 MB file) beside every copy of the library it builds. **Ship `assets/` next to `audiocpp.dll`** (see [building.md](building.md#shipping)), and the default works wherever the app runs.
+  - To use another VAD file, set the family's `…vad_model_path` session option. To skip the VAD, set the request option `audio_chunk_mode` to `fixed` (fixed windows) or `none` (short utterances).
+  - The request audio can be at any sample rate: the chunker resamples for Silero.
+  - `tests/roundtrip.rs` covers the default, an explicit path, and no chunking.
 - **Threads and contention.** Small models run many small graphs, and every OpenMP thread waits at a barrier after each one: when another process takes CPU time, one preempted thread stalls them all. On 2026-11-25 the same tiny_voca synthesis took between 2 s and 42 s while another benchmark loaded the machine. Give each engine a thread budget below the core count, and benchmark only on an idle machine.
 - **Sample positions** in segments, words and speaker turns are in samples of the request's audio.
 - **Seeds.** `request.seed(n)` is the request option `seed`; `-1` asks audio.cpp for a fresh random seed. Without it, families keep their own default.

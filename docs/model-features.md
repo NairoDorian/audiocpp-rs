@@ -4,7 +4,7 @@
 
 One Cargo feature per audio.cpp model target. Enable a feature on `audiocpp` (or `audiocpp-sys`) to compile that family into the library; no model feature builds the core runtime only. Aliases are the other names audio.cpp accepts for the same target (for `AUDIOCPP_MODELS`).
 
-145 targets.
+147 targets.
 
 | Feature | Aliases |
 |---|---|
@@ -30,6 +30,7 @@ One Cargo feature per audio.cpp model target. Enable a feature on `audiocpp` (or
 | `model-cosyvoice3` |  |
 | `model-crisperwhisper` |  |
 | `model-demucs` |  |
+| `model-dettato` |  |
 | `model-dots_tts` |  |
 | `model-dramabox` |  |
 | `model-earshot_vad` |  |
@@ -55,6 +56,7 @@ One Cargo feature per audio.cpp model target. Enable a feature on `audiocpp` (or
 | `model-index_tts2` |  |
 | `model-inflect_v2` |  |
 | `model-irodori_tts` |  |
+| `model-kale_tts` |  |
 | `model-kitten_tts` |  |
 | `model-kitten_tts2` |  |
 | `model-kokoro_tts` |  |

@@ -11,7 +11,6 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 authors.workspace = true
 
 [lib]
@@ -62,6 +61,7 @@ model-controlfoley = []
 model-cosyvoice3 = []
 model-crisperwhisper = []
 model-demucs = []
+model-dettato = []
 model-dots_tts = []
 model-dramabox = []
 model-earshot_vad = []
@@ -87,6 +87,7 @@ model-index_echo = []
 model-index_tts2 = []
 model-inflect_v2 = []
 model-irodori_tts = []
+model-kale_tts = []
 model-kitten_tts = []
 model-kitten_tts2 = []
 model-kokoro_tts = []

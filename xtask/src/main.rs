@@ -8,6 +8,9 @@
 //!                                    parameter count), the ABI version, and the header
 //!                                    hash recorded in audiocpp-sys/abi.lock
 //!   cargo xtask status [--fetch]     the audio.cpp pin against its release and main lanes
+//!   cargo xtask bump                 move the pin to audio.cpp's latest main commit, prove
+//!                                    the bindings against its header, regenerate the features
+//!                                    (exits 1, pin moved, when the C header changed: review first)
 //!
 //! Every --check / check-abi exits 1 when something is stale, so CI can run them.
 
@@ -35,8 +38,9 @@ fn main() -> ExitCode {
         Some("features") => features(flag("--check")),
         Some("check-abi") => check_abi(flag("--update")),
         Some("status") => status(flag("--fetch")),
+        Some("bump") => bump(),
         _ => {
-            eprintln!("usage: cargo xtask <features [--check] | check-abi [--update] | status [--fetch]>");
+            eprintln!("usage: cargo xtask <features [--check] | check-abi [--update] | status [--fetch] | bump>");
             return ExitCode::from(2);
         }
     };
@@ -244,7 +248,8 @@ fn check_abi(update: bool) -> Result<bool, String> {
     }
 
     let digest = format!("{:x}", Sha256::digest(header.replace("\r\n", "\n").as_bytes()));
-    let describe = git(&audio_cpp(), &["describe", "--tags", "--always", "--abbrev=8"]).unwrap_or_default();
+    let describe =
+        git(&audio_cpp(), &["describe", "--tags", "--match", "v*", "--always", "--abbrev=8"]).unwrap_or_default();
     let lock = format!(
         "# Written by `cargo xtask check-abi --update` after the bindings were reviewed\n\
          # against this header. A different hash means the header changed: review\n\
@@ -282,6 +287,54 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
     out.status.success().then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+// ---------------------------------------------------------------------------
+// bump
+// ---------------------------------------------------------------------------
+/// Move the pin to audio.cpp's latest main commit: fetch, check out origin/main, prove the
+/// bindings against its header, regenerate the model features. Returns false (exit 1) when the
+/// C header changed: the checkout stays moved so the bindings can be reviewed against it.
+/// Under GitHub Actions (GITHUB_OUTPUT set) it also writes `moved`, `from`, `to` and `commits`.
+fn bump() -> Result<bool, String> {
+    let dir = audio_cpp();
+    git(&dir, &["fetch", "origin", "--tags", "--prune", "--force"]).ok_or("git fetch failed")?;
+    let from = git(&dir, &["rev-parse", "HEAD"]).ok_or("audio.cpp is not checked out")?;
+    let to = git(&dir, &["rev-parse", "refs/remotes/origin/main"]).ok_or("audio.cpp has no origin/main")?;
+    let commits = git(&dir, &["rev-list", "--count", &format!("{from}..{to}")]).unwrap_or_else(|| "?".into());
+    let moved = from != to;
+    let fields = [
+        ("moved", if moved { "true" } else { "false" }),
+        ("from", &from[..8]),
+        ("to", &to[..8]),
+        ("commits", commits.as_str()),
+    ];
+    for (key, value) in fields {
+        github_output(key, value);
+    }
+    if !moved {
+        println!("audio.cpp is already at main ({})", &to[..8]);
+        return Ok(true);
+    }
+    git(&dir, &["checkout", "--quiet", "--detach", &to]).ok_or("git checkout failed")?;
+    println!("audio.cpp {} -> {} ({commits} commits)", &from[..8], &to[..8]);
+    if !check_abi(false)? {
+        eprintln!(
+            "the C header changed: review audiocpp-sys/src/lib.rs against it, then \
+             `cargo xtask check-abi --update` (docs/updating-audio-cpp.md)"
+        );
+        return Ok(false);
+    }
+    features(false)
+}
+
+fn github_output(key: &str, value: &str) {
+    use std::io::Write;
+    if let Some(path) = std::env::var_os("GITHUB_OUTPUT") {
+        if let Ok(mut file) = fs::OpenOptions::new().append(true).open(path) {
+            let _ = writeln!(file, "{key}={value}");
+        }
+    }
+}
+
 fn is_release_tag(tag: &str) -> bool {
     let Some(v) = tag.strip_prefix('v') else { return false };
     let parts: Vec<&str> = v.split('.').collect();
@@ -298,7 +351,9 @@ fn status(fetch: bool) -> Result<bool, String> {
         .and_then(|l| l.split_whitespace().nth(1).map(str::to_string))
         .ok_or("audiocpp-sys/audio.cpp is not a submodule here")?;
     let head = git(&dir, &["rev-parse", "HEAD"]).ok_or("audio.cpp is not checked out")?;
-    let describe = |rev: &str| git(&dir, &["describe", "--tags", "--always", "--abbrev=8", rev]).unwrap_or_default();
+    let describe = |rev: &str| {
+        git(&dir, &["describe", "--tags", "--match", "v*", "--always", "--abbrev=8", rev]).unwrap_or_default()
+    };
     let count = |a: &str, b: &str| {
         git(&dir, &["rev-list", "--left-right", "--count", &format!("{a}...{b}")])
             .map(|s| s.split_whitespace().map(str::to_string).collect::<Vec<_>>())
