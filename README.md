@@ -15,8 +15,8 @@ Written for [ZER0 / FreeSpeech](#who-it-is-for), next to [`transcribe-cpp`](http
 |---|---|
 | audio.cpp pin | **audio.cpp's latest `main` commit**, followed daily by a workflow that builds and tests each move ([`docs/updating-audio-cpp.md`](docs/updating-audio-cpp.md)); C ABI 0.4.0 |
 | Bindings | the whole C ABI: offline and streaming sessions, requests (text, audio, voices, style, options, artifacts), results (audio, text, segments, words, speaker turns, named audio, artifacts, custom schema), model introspection, logging |
-| Verified on | Windows 11, MSVC 14.52, CPU (see the CHANGELOG for the test run) |
-| Not yet verified | Linux, macOS, Android, GPU backends (they build through the same features; nobody has run them here yet) |
+| Verified on | Windows, Linux and macOS (GitHub's `windows-latest`, `ubuntu-latest`, `macos-latest`), CPU: 13 of 13 tests pass on each with the models required. Also on Windows 11, MSVC 14.52 locally. See the CHANGELOG |
+| Not yet verified | Android, GPU backends (they build through the same features; nobody has run them here yet) |
 
 ## Quick start
 

@@ -36,6 +36,8 @@ Windows 11, i9-13900H, MSVC 14.52, CPU, audio.cpp `dd1ad8bd`, features `model-ti
 
 `cargo xtask check-abi`, `cargo xtask features --check` and `cargo fmt --check` pass.
 
+CI matrix ([run 45756583551](https://github.com/NairoDorian/audiocpp-rs/actions/runs/45756583551), commit `b8de8a4`, the same features, models required): **13 passed** on each of `windows-latest`, `ubuntu-latest` and `macos-latest`. It is the first time the crate has run on Linux and macOS.
+
 ## 0.1.0 — 2026-11-25
 
 First version: Rust bindings to audio.cpp's C ABI, for ZER0 / FreeSpeech.
