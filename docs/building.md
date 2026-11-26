@@ -9,7 +9,7 @@
 | all | Rust 1.80+, CMake 3.20+, a C++17 compiler, git (for the submodule). Ninja is used when found (faster). |
 | Windows | Visual Studio 2022 or newer with the C++ workload. The build finds it through `vswhere` and loads `vcvars64.bat` itself, so a plain terminal works. |
 | Linux | gcc or clang; `libgomp` for the `openmp` feature. Vulkan: the Vulkan SDK / headers + `glslc`. |
-| macOS | Xcode command-line tools. Metal is on by default. |
+| macOS | Xcode command-line tools. Metal is on by default. The `openmp` feature has no effect: Apple's clang has no OpenMP, so ggml uses its own thread pool, as in audio.cpp's macOS releases. |
 | CUDA | the CUDA toolkit; `AUDIOCPP_CUDA_ARCHITECTURES` (default `native`: the GPU of the build machine). |
 
 ## What the build does

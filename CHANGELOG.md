@@ -18,6 +18,7 @@
 - **The build reruns when the audio.cpp checkout moves** (its git `HEAD`), not only when `audiocpp.h`, `CMakeLists.txt` or the C API source change. A bump that touched only model code used to keep the old library.
 - **Model features:** 147, up from 145 (two new families upstream). The C ABI is unchanged (0.4.0, 77 functions).
 - **Examples:** `asr` and `roundtrip` use default options; the fixed-chunk and no-chunk workarounds are gone.
+- **macOS builds:** `openmp` no longer applies on Apple targets, whose clang has no OpenMP. CMake used to stop with "Could NOT find OpenMP_CXX". ggml uses its own thread pool there, as in audio.cpp's macOS releases. This was found by the first CI run on all three systems: Linux and Windows passed.
 - **Tests:**
   - New: `default_options_chunk_with_the_vad_beside_the_library` (SenseVoice at 24 kHz, no options; it fails when the staged asset is removed).
   - The explicit-VAD-path test feeds 24 kHz audio directly.

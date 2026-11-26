@@ -171,7 +171,10 @@ fn build_from_source(target_os: &str) -> PathBuf {
         // audio.cpp defaults this ON: a library built for the build machine's ISA
         // crashes (SIGILL) on older CPUs. Off = ggml's portable floor.
         .define("ENGINE_ENABLE_NATIVE_CPU", on_off(feature("native")))
-        .define("ENGINE_ENABLE_OPENMP", on_off(feature("openmp")))
+        // Apple's clang has no OpenMP; audio.cpp's own macOS builds turn it off too. ggml then
+        // uses its own thread pool.
+        .define("ENGINE_ENABLE_OPENMP", on_off(feature("openmp") && !is_apple))
+        .define("GGML_OPENMP", on_off(feature("openmp") && !is_apple))
         .define("ENGINE_ENABLE_VULKAN", on_off(feature("vulkan")))
         .define("ENGINE_ENABLE_CUDA", on_off(feature("cuda")))
         .define("ENGINE_ENABLE_HIP", on_off(feature("hip")))
