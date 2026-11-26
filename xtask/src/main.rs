@@ -294,14 +294,24 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
 /// bindings against its header, regenerate the model features. Returns false (exit 1) when the
 /// C header changed: the checkout stays moved so the bindings can be reviewed against it.
 /// Under GitHub Actions (GITHUB_OUTPUT set) it also writes `moved`, `from`, `to`, `commits`
-/// and `commits_text` ("1 commit", "3 commits").
+/// and `commits_text` ("from 40907ede, 6 commits"; just "from 40907ede" in a shallow clone,
+/// such as CI's submodule checkout, where the commits in between are not there to count).
 fn bump() -> Result<bool, String> {
     let dir = audio_cpp();
     git(&dir, &["fetch", "origin", "--tags", "--prune", "--force"]).ok_or("git fetch failed")?;
     let from = git(&dir, &["rev-parse", "HEAD"]).ok_or("audio.cpp is not checked out")?;
     let to = git(&dir, &["rev-parse", "refs/remotes/origin/main"]).ok_or("audio.cpp has no origin/main")?;
-    let commits = git(&dir, &["rev-list", "--count", &format!("{from}..{to}")]).unwrap_or_else(|| "?".into());
-    let commits_text = if commits == "1" { "1 commit".to_string() } else { format!("{commits} commits") };
+    let shallow = git(&dir, &["rev-parse", "--is-shallow-repository"]).as_deref() == Some("true");
+    let commits = if shallow {
+        "?".to_string()
+    } else {
+        git(&dir, &["rev-list", "--count", &format!("{from}..{to}")]).unwrap_or_else(|| "?".into())
+    };
+    let commits_text = match commits.as_str() {
+        "?" => format!("from {}", &from[..8]),
+        "1" => format!("from {}, 1 commit", &from[..8]),
+        n => format!("from {}, {n} commits", &from[..8]),
+    };
     let moved = from != to;
     let fields = [
         ("moved", if moved { "true" } else { "false" }),
