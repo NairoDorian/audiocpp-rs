@@ -8,8 +8,9 @@ audio.cpp is a git submodule at `audiocpp-sys/audio.cpp`. **The commit it points
 1. `cargo xtask bump` moves the submodule to audio.cpp's `main`, proves the bindings against its C header, and regenerates the `model-*` features.
 2. It builds audio.cpp and runs the model tests (Linux).
 3. It pushes `deps(audio.cpp): follow main to <commit>`.
+4. It starts the full `ci` run on the new pin: the build and the model tests on Windows, Linux and macOS. A push made by a workflow starts no other workflow, so this run is started explicitly.
 
-If the C header changed, or the build or a test fails, the run stops before the push and fails, which notifies the repository owner. Then follow the steps below by hand.
+If the C header changed, or the build or a test fails, the run stops before the push and fails, which notifies the repository owner. Then follow the steps below by hand. A failure in step 4 comes after the push: the pin has moved, and the failed `ci` run notifies the owner.
 
 An app that wants a fixed audio.cpp pins **this** crate by `rev` in its `Cargo.toml`: each commit here pins exactly one audio.cpp commit.
 

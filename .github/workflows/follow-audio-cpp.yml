@@ -5,7 +5,9 @@ name: follow audio.cpp
 #   1. `cargo xtask bump`: move the submodule to audio.cpp's main, prove the bindings against
 #      its C header, regenerate the model features;
 #   2. build audio.cpp and run the model tests (Linux);
-#   3. push the move to main.
+#   3. push the move to main;
+#   4. start the full ci run (Windows, Linux, macOS) on it: a push made with the workflow's token
+#      starts no other workflow, so the ci run is started explicitly.
 # A changed C header, a failed build or a failed test stops the run before the push. The run
 # then fails, which notifies the repository owner; docs/updating-audio-cpp.md has the manual steps.
 
@@ -16,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: follow-audio-cpp
@@ -61,3 +64,9 @@ jobs:
           # generated files, so put it on top of the latest main.
           git pull --rebase origin main
           git push
+
+      - name: Build and test the new pin on Windows, Linux and macOS
+        if: steps.bump.outputs.moved == 'true'
+        run: gh workflow run ci.yml --ref main -f build=true
+        env:
+          GH_TOKEN: ${{ github.token }}
